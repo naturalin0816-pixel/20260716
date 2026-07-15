@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>디지털 활용연수 참석 명단</title>
+<style>
+  :root{
+    --ink:#1c2b24;
+    --paper:#faf7f0;
+    --line:#d8d0bd;
+    --accent:#2f6b52;
+    --accent-dark:#20493a;
+    --muted:#7a7264;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    display:flex;
+    justify-content:center;
+    padding:32px 16px 60px;
+  }
+  .wrap{width:100%;max-width:420px;}
+  .stamp{
+    width:56px;height:56px;border-radius:50%;
+    border:2px solid var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;color:var(--accent);
+    margin:0 auto 18px;letter-spacing:1px;
+  }
+  h1{
+    font-size:20px;font-weight:700;text-align:center;line-height:1.4;margin:0 0 18px;
+  }
+  .info{
+    background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px;margin-bottom:24px;
+  }
+  .info-row{display:flex;gap:10px;font-size:14px;padding:5px 0;color:var(--ink);}
+  .info-row b{color:var(--accent-dark);min-width:44px;}
+  form{margin-bottom:22px;}
+  label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px;}
+  input[type=text]{
+    width:100%;padding:12px 14px;font-size:16px;
+    border:1px solid var(--line);border-radius:10px;
+    background:#fff;color:var(--ink);
+  }
+  input[type=text]:focus{outline:none;border-color:var(--accent);}
+  button{
+    width:100%;margin-top:12px;padding:13px;font-size:15px;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:10px;
+    cursor:pointer;
+  }
+  button:disabled{background:#b9b2a2;cursor:default;}
+  button:active:not(:disabled){background:var(--accent-dark);}
+  .msg{
+    margin-top:12px;padding:11px 14px;border-radius:10px;font-size:14px;
+    display:none;
+  }
+  .msg.show{display:block;}
+  .msg.ok{background:#e7f3ec;color:var(--accent-dark);}
+  .msg.err{background:#fbeaea;color:#8a2f2f;}
+  .list-title{
+    font-size:14px;font-weight:700;color:var(--accent-dark);
+    margin:0 0 10px;display:flex;justify-content:space-between;align-items:center;
+  }
+  .count{font-weight:400;color:var(--muted);font-size:13px;}
+  ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--line);}
+  li{
+    display:flex;justify-content:space-between;
+    padding:10px 2px;border-bottom:1px solid var(--line);font-size:14px;
+  }
+  li .t{color:var(--muted);font-size:12px;}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:20px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stamp">참석<br>확인</div>
+  <h1>학교로 찾아가는<br>디지털 활용연수 참석 명단</h1>
+  <div class="info">
+    <div class="info-row"><b>일시</b><span>7월 16일 (수) 14:00 ~ 16:00</span></div>
+    <div class="info-row"><b>장소</b><span>순창고등학교 에듀테크실</span></div>
+  </div>
+
+  <form id="form">
+    <label for="name">이름</label>
+    <input type="text" id="name" placeholder="성함을 입력해주세요" autocomplete="off" />
+    <button type="submit" id="submitBtn">참석 확인</button>
+    <div class="msg" id="msg"></div>
+  </form>
+
+  <div class="list-title">참석자 명단 <span class="count" id="count"></span></div>
+  <ul id="list"><li class="empty">불러오는 중...</li></ul>
+</div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzl6cKTlV8BaKCClC8XCIMBkqF0nSMpDzdC2vbmUKcLe7YK_DLBUYhiTvSOlZGO0Dbhpg/exec";
+
+const form = document.getElementById('form');
+const nameInput = document.getElementById('name');
+const submitBtn = document.getElementById('submitBtn');
+const msg = document.getElementById('msg');
+const list = document.getElementById('list');
+const count = document.getElementById('count');
+
+function showMsg(text, type){
+  msg.textContent = text;
+  msg.className = 'msg show ' + type;
+}
+
+function renderList(rows){
+  list.innerHTML = '';
+  count.textContent = rows.length ? rows.length + '명' : '';
+  if(!rows.length){
+    list.innerHTML = '<li class="empty">아직 참석자가 없습니다.</li>';
+    return;
+  }
+  rows.slice().reverse().forEach(r => {
+    const li = document.createElement('li');
+    li.innerHTML = '<span>' + r.name + '</span><span class="t">' + (r.time || '') + '</span>';
+    list.appendChild(li);
+  });
+}
+
+async function loadList(){
+  try{
+    const res = await fetch(SCRIPT_URL);
+    const data = await res.json();
+    renderList(data.rows || []);
+  }catch(e){
+    list.innerHTML = '<li class="empty">명단을 불러오지 못했습니다.</li>';
+  }
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = nameInput.value.trim();
+  if(!name){
+    showMsg('이름을 입력해주세요.', 'err');
+    return;
+  }
+  submitBtn.disabled = true;
+  submitBtn.textContent = '처리 중...';
+  try{
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ name })
+    });
+    const data = await res.json();
+    if(data.result === 'success'){
+      showMsg('참석 확인이 완료되었습니다.', 'ok');
+      nameInput.value = '';
+      loadList();
+    }else if(data.result === 'duplicate'){
+      showMsg('이미 제출된 이름입니다.', 'err');
+    }else{
+      showMsg(data.message || '오류가 발생했습니다.', 'err');
+    }
+  }catch(err){
+    showMsg('전송에 실패했습니다. 네트워크를 확인해주세요.', 'err');
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = '참석 확인';
+  }
+});
+
+loadList();
+</script>
+</body>
+</html>
